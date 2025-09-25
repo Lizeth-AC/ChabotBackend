@@ -2,6 +2,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import re
+import logging
+
+# ⚙️ Configuración de logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("uvicorn")
+
+logger.info("🚀 Servicio FastAPI iniciado")
 
 app = FastAPI(title="ChatBot Alexa Backend")
 
@@ -29,6 +36,7 @@ def cargar_texto(path="respuesta.txt"):
             contenido = f.read()
         return [linea.strip() for linea in re.split(r'\n{2,}', contenido) if linea.strip()]
     except FileNotFoundError:
+        logger.warning("Archivo 'respuesta.txt' no encontrado. Se usará base vacía.")
         return ["Base de datos vacía"]
 
 # ⚙️ Tokenizar y limpiar
@@ -76,12 +84,14 @@ oraciones = cargar_texto()
 # 🔹 Endpoint de prueba
 @app.post("/preguntar")
 async def preguntar(mensaje: Mensaje):
+    logger.info(f"POST /preguntar recibido: {mensaje.texto}")
     respuesta = obtener_respuesta(mensaje.texto, oraciones)
     return {"respuesta": respuesta}
 
 # 🔹 Endpoint raíz (para test de Render)
 @app.get("/")
 async def root():
+    logger.info("GET / recibido")
     return JSONResponse({
         "version": "1.0",
         "response": {
@@ -98,13 +108,13 @@ async def root():
 async def alexa_webhook(request: Request):
     try:
         body = await request.json()
+        logger.info(f"POST /alexa recibido: {body}")
         req_type = body.get("request", {}).get("type", "")
 
         if req_type == "LaunchRequest":
-            # Respuesta de bienvenida
             respuesta = "¡Hola! Bienvenido a ChatBot Teddy. ¿En qué puedo ayudarte?"
         elif req_type == "IntentRequest":
-            slots = body["request"]["intent"].get("slots", {})
+            slots = body.get("request", {}).get("intent", {}).get("slots", {})
             consulta = slots.get("consulta", {}).get("value", "")
             if consulta:
                 respuesta = obtener_respuesta(consulta, oraciones)
@@ -125,7 +135,7 @@ async def alexa_webhook(request: Request):
         }
 
     except Exception as e:
-        # Esto evita devolver 400 y rompe la skill
+        logger.error(f"Error en /alexa: {e}", exc_info=True)
         return {
             "version": "1.0",
             "response": {
