@@ -98,23 +98,15 @@ async def root():
 async def alexa_webhook(request: Request):
     try:
         body = await request.json()
+        req_type = body["request"]["type"]
 
-        # Si es LaunchRequest (cuando abres la Skill)
-        if body["request"]["type"] == "LaunchRequest":
-            return {
-                "version": "1.0",
-                "response": {
-                    "outputSpeech": {
-                        "type": "PlainText",
-                        "text": "¡Hola! Soy tu ChatBot. Puedes hacerme una pregunta."
-                    },
-                    "shouldEndSession": False
-                }
-            }
-
-        # Si es IntentRequest
-        consulta = body["request"]["intent"]["slots"]["consulta"]["value"]
-        respuesta = obtener_respuesta(consulta, oraciones)
+        if req_type == "LaunchRequest":
+            respuesta = "¡Hola! Bienvenido a ChatBot Teddy. ¿En qué puedo ayudarte?"
+        elif req_type == "IntentRequest":
+            consulta = body["request"]["intent"]["slots"]["consulta"]["value"]
+            respuesta = obtener_respuesta(consulta, oraciones)
+        else:
+            respuesta = "No entiendo tu solicitud."
 
         return {
             "version": "1.0",
@@ -126,5 +118,6 @@ async def alexa_webhook(request: Request):
                 "shouldEndSession": False
             }
         }
+
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": str(e)})
