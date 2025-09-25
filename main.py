@@ -77,9 +77,10 @@ async def preguntar(mensaje: Mensaje):
 
 # 🔹 Endpoint para Alexa (respuesta en formato Alexa JSON)
 @app.post("/alexa")
-async def alexa_webhook(request: dict):
+async def alexa_webhook(request: Request):
     try:
-        consulta = request["request"]["intent"]["slots"]["consulta"]["value"]
+        body = await request.json()  # 👈 obtiene el JSON que Alexa envía
+        consulta = body["request"]["intent"]["slots"]["consulta"]["value"]
         respuesta = obtener_respuesta(consulta, oraciones)
 
         return {
