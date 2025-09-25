@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import re
@@ -18,15 +18,18 @@ stopwords = [
     "algunas", "algo", "nosotros", "mi", "mis", "tú", "te", "ti", "tu", "tus", "si"
 ]
 
-# ⚙️ Modelo para endpoint normal
+# ⚙️ Modelo para /preguntar
 class Mensaje(BaseModel):
     texto: str
 
 # ⚙️ Cargar oraciones desde archivo
-def cargar_texto(path="Respuestas_ChatBot.txt"):
-    with open(path, "r", encoding="utf-8") as f:
-        contenido = f.read()
-    return [linea.strip() for linea in re.split(r'\n{2,}', contenido) if linea.strip()]
+def cargar_texto(path="respuesta.txt"):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            contenido = f.read()
+        return [linea.strip() for linea in re.split(r'\n{2,}', contenido) if linea.strip()]
+    except FileNotFoundError:
+        return ["Base de datos vacía"]
 
 # ⚙️ Tokenizar y limpiar
 def tokenizar(texto):
@@ -39,6 +42,7 @@ def limpiar_palabras(palabras):
 def obtener_respuesta(mensaje, oraciones):
     mensaje_limpio = mensaje.lower()
 
+    # Respuestas rápidas
     if any(saludo in mensaje_limpio for saludo in ["hola", "buenos días", "buen dia", "buenas tardes", "buenas noches"]):
         return "¡Hola!👋 ¿En qué puedo ayudarte hoy?💬"
     if any(agradecer in mensaje_limpio for agradecer in ["gracias", "te lo agradezco"]):
@@ -46,8 +50,8 @@ def obtener_respuesta(mensaje, oraciones):
     if any(despedida in mensaje_limpio for despedida in ["adios", "chau", "chao", "hasta luego"]):
         return "¡Hasta luego!🙌 Espero que tengas un gran día.✨"
 
+    # Búsqueda por coincidencias
     palabras_mensaje = limpiar_palabras(tokenizar(mensaje_limpio))
-
     max_coincidencias = 0
     oraciones_coincidentes = []
 
@@ -79,7 +83,7 @@ async def preguntar(mensaje: Mensaje):
 @app.post("/alexa")
 async def alexa_webhook(request: Request):
     try:
-        body = await request.json()  # 👈 obtiene el JSON que Alexa envía
+        body = await request.json()
         consulta = body["request"]["intent"]["slots"]["consulta"]["value"]
         respuesta = obtener_respuesta(consulta, oraciones)
 
