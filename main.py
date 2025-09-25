@@ -18,7 +18,7 @@ stopwords = [
     "algunas", "algo", "nosotros", "mi", "mis", "tú", "te", "ti", "tu", "tus", "si"
 ]
 
-# ⚙️ Modelo para /preguntar
+# ⚙️ Modelo para endpoint de prueba
 class Mensaje(BaseModel):
     texto: str
 
@@ -73,62 +73,58 @@ def obtener_respuesta(mensaje, oraciones):
 # ⚙️ Cargar oraciones al iniciar
 oraciones = cargar_texto()
 
-# 🔹 Endpoint normal (para pruebas con Postman o navegador)
+# 🔹 Endpoint de prueba
 @app.post("/preguntar")
 async def preguntar(mensaje: Mensaje):
     respuesta = obtener_respuesta(mensaje.texto, oraciones)
     return {"respuesta": respuesta}
 
-# 🔹 Endpoint para Alexa (respuesta en formato Alexa JSON)
+# 🔹 Endpoint raíz (para test de Render)
+@app.get("/")
+async def root():
+    return JSONResponse({
+        "version": "1.0",
+        "response": {
+            "shouldEndSession": False,
+            "outputSpeech": {
+                "type": "PlainText",
+                "text": "Hola, el servicio de ChatBot Alexa en Render está activo 🚀"
+            }
+        }
+    })
+
+# 🔹 Endpoint para Alexa
 @app.post("/alexa")
 async def alexa_webhook(request: Request):
     try:
         body = await request.json()
-        req_type = body["request"]["type"]
 
-        # Caso: cuando el usuario abre la skill
-        if req_type == "LaunchRequest":
+        # Si es LaunchRequest (cuando abres la Skill)
+        if body["request"]["type"] == "LaunchRequest":
             return {
                 "version": "1.0",
                 "response": {
                     "outputSpeech": {
                         "type": "PlainText",
-                        "text": "¡Hola! 👋 Soy tu chatbot. Pregúntame lo que quieras."
+                        "text": "¡Hola! Soy tu ChatBot. Puedes hacerme una pregunta."
                     },
                     "shouldEndSession": False
                 }
             }
 
-        # Caso: cuando el usuario dice algo definido en un Intent
-        if req_type == "IntentRequest":
-            intent = body["request"]["intent"]["name"]
+        # Si es IntentRequest
+        consulta = body["request"]["intent"]["slots"]["consulta"]["value"]
+        respuesta = obtener_respuesta(consulta, oraciones)
 
-            if intent == "ChatIntent":
-                consulta = body["request"]["intent"]["slots"]["consulta"]["value"]
-                respuesta = obtener_respuesta(consulta, oraciones)
-
-                return {
-                    "version": "1.0",
-                    "response": {
-                        "outputSpeech": {
-                            "type": "PlainText",
-                            "text": respuesta
-                        },
-                        "shouldEndSession": False
-                    }
-                }
-
-        # Fallback si no reconoce el request
         return {
             "version": "1.0",
             "response": {
                 "outputSpeech": {
                     "type": "PlainText",
-                    "text": "Lo siento, no entendí tu petición."
+                    "text": respuesta
                 },
                 "shouldEndSession": False
             }
         }
-
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": str(e)})
