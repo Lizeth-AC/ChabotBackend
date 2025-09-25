@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import re
 
@@ -17,12 +18,12 @@ stopwords = [
     "algunas", "algo", "nosotros", "mi", "mis", "tú", "te", "ti", "tu", "tus", "si"
 ]
 
-# ⚙️ Modelo de petición
+# ⚙️ Modelo para endpoint normal
 class Mensaje(BaseModel):
     texto: str
 
 # ⚙️ Cargar oraciones desde archivo
-def cargar_texto(path="respuesta.txt"):
+def cargar_texto(path="Respuestas_ChatBot.txt"):
     with open(path, "r", encoding="utf-8") as f:
         contenido = f.read()
     return [linea.strip() for linea in re.split(r'\n{2,}', contenido) if linea.strip()]
@@ -65,11 +66,31 @@ def obtener_respuesta(mensaje, oraciones):
 
     return "\n\n".join(oraciones_coincidentes)
 
-# ⚙️ Cargar oraciones al iniciar el servidor
+# ⚙️ Cargar oraciones al iniciar
 oraciones = cargar_texto()
 
-# ⚙️ Ruta principal de Alexa
+# 🔹 Endpoint normal (para pruebas con Postman o navegador)
 @app.post("/preguntar")
 async def preguntar(mensaje: Mensaje):
     respuesta = obtener_respuesta(mensaje.texto, oraciones)
     return {"respuesta": respuesta}
+
+# 🔹 Endpoint para Alexa (respuesta en formato Alexa JSON)
+@app.post("/alexa")
+async def alexa_webhook(request: dict):
+    try:
+        consulta = request["request"]["intent"]["slots"]["consulta"]["value"]
+        respuesta = obtener_respuesta(consulta, oraciones)
+
+        return {
+            "version": "1.0",
+            "response": {
+                "outputSpeech": {
+                    "type": "PlainText",
+                    "text": respuesta
+                },
+                "shouldEndSession": False
+            }
+        }
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
