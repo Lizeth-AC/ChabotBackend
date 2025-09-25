@@ -84,18 +84,51 @@ async def preguntar(mensaje: Mensaje):
 async def alexa_webhook(request: Request):
     try:
         body = await request.json()
-        consulta = body["request"]["intent"]["slots"]["consulta"]["value"]
-        respuesta = obtener_respuesta(consulta, oraciones)
+        req_type = body["request"]["type"]
 
+        # Caso: cuando el usuario abre la skill
+        if req_type == "LaunchRequest":
+            return {
+                "version": "1.0",
+                "response": {
+                    "outputSpeech": {
+                        "type": "PlainText",
+                        "text": "¡Hola! 👋 Soy tu chatbot. Pregúntame lo que quieras."
+                    },
+                    "shouldEndSession": False
+                }
+            }
+
+        # Caso: cuando el usuario dice algo definido en un Intent
+        if req_type == "IntentRequest":
+            intent = body["request"]["intent"]["name"]
+
+            if intent == "ChatIntent":
+                consulta = body["request"]["intent"]["slots"]["consulta"]["value"]
+                respuesta = obtener_respuesta(consulta, oraciones)
+
+                return {
+                    "version": "1.0",
+                    "response": {
+                        "outputSpeech": {
+                            "type": "PlainText",
+                            "text": respuesta
+                        },
+                        "shouldEndSession": False
+                    }
+                }
+
+        # Fallback si no reconoce el request
         return {
             "version": "1.0",
             "response": {
                 "outputSpeech": {
                     "type": "PlainText",
-                    "text": respuesta
+                    "text": "Lo siento, no entendí tu petición."
                 },
                 "shouldEndSession": False
             }
         }
+
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": str(e)})
