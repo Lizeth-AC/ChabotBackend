@@ -110,17 +110,19 @@ async def alexa_webhook(request: Request):
     body = await request.json()
     print("📥 Request de Alexa:", body)
 
+    response = {
+        "version": "1.0",
+        "sessionAttributes": {},  # 👈 obligatorio
+        "response": {
+            "outputSpeech": {
+                "type": "PlainText",
+                "text": "Hola, la conexión con FastAPI funciona correctamente."
+            },
+            "shouldEndSession": False
+        }
+    }
+
     return JSONResponse(
-        content={
-            "version": "1.0",
-            "sessionAttributes": {},   # 👈 obligatorio, aunque esté vacío
-            "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": "Hola desde FastAPI, la conexión funciona correctamente."
-                },
-                "shouldEndSession": False
-            }
-        },
+        content=response,
         media_type="application/json"
     )
