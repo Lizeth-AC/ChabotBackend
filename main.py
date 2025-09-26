@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from fastapi.responses import JSONResponse
 import re
 import logging
 
@@ -104,11 +105,11 @@ async def root():
     })
 
 # 🔹 Endpoint para Alexa
+
 @app.post("/alexa")
 async def alexa_webhook(request: Request):
     try:
         body = await request.json()
-        logger.info(f"POST /alexa recibido: {body}")
         req_type = body.get("request", {}).get("type", "")
 
         if req_type == "LaunchRequest":
@@ -123,26 +124,31 @@ async def alexa_webhook(request: Request):
         else:
             respuesta = "No entiendo tu solicitud."
 
-        return {
-            "version": "1.0",
-            "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": respuesta
-                },
-                "shouldEndSession": False
-            }
-        }
+        return JSONResponse(
+            content={
+                "version": "1.0",
+                "response": {
+                    "outputSpeech": {
+                        "type": "PlainText",
+                        "text": respuesta
+                    },
+                    "shouldEndSession": False
+                }
+            },
+            media_type="application/json"
+        )
 
     except Exception as e:
-        logger.error(f"Error en /alexa: {e}", exc_info=True)
-        return {
-            "version": "1.0",
-            "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": f"Ocurrió un error: {str(e)}"
-                },
-                "shouldEndSession": True
-            }
-        }
+        return JSONResponse(
+            content={
+                "version": "1.0",
+                "response": {
+                    "outputSpeech": {
+                        "type": "PlainText",
+                        "text": f"Ocurrió un error: {str(e)}"
+                    },
+                    "shouldEndSession": True
+                }
+            },
+            media_type="application/json"
+        )
