@@ -108,11 +108,12 @@ async def root():
 @app.post("/alexa")
 async def alexa_webhook(request: Request):
     body = await request.json()
-    print("📥 Request de Alexa:", body)  # Log para debug
+    print("📥 Request de Alexa:", body)
 
     return JSONResponse(
         content={
             "version": "1.0",
+            "sessionAttributes": {},   # 👈 obligatorio, aunque esté vacío
             "response": {
                 "outputSpeech": {
                     "type": "PlainText",
