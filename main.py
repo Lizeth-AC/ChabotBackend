@@ -11,7 +11,7 @@ logger = logging.getLogger("uvicorn")
 
 logger.info("🚀 Servicio FastAPI iniciado")
 
-app = FastAPI(title="ChatBot Alexa Backend")
+app = FastAPI()
 
 # ⚙️ Stopwords
 stopwords = [
@@ -105,50 +105,21 @@ async def root():
     })
 
 # 🔹 Endpoint para Alexa
-
 @app.post("/alexa")
 async def alexa_webhook(request: Request):
-    try:
-        body = await request.json()
-        req_type = body.get("request", {}).get("type", "")
+    body = await request.json()
+    print("📥 Request de Alexa:", body)  # Log para debug
 
-        if req_type == "LaunchRequest":
-            respuesta = "¡Hola! Bienvenido a ChatBot Teddy. ¿En qué puedo ayudarte?"
-        elif req_type == "IntentRequest":
-            slots = body.get("request", {}).get("intent", {}).get("slots", {})
-            consulta = slots.get("consulta", {}).get("value", "")
-            if consulta:
-                respuesta = obtener_respuesta(consulta, oraciones)
-            else:
-                respuesta = "No entendí tu consulta. Por favor repite."
-        else:
-            respuesta = "No entiendo tu solicitud."
-
-        return JSONResponse(
-            content={
-                "version": "1.0",
-                "response": {
-                    "outputSpeech": {
-                        "type": "PlainText",
-                        "text": respuesta
-                    },
-                    "shouldEndSession": False
-                }
-            },
-            media_type="application/json"
-        )
-
-    except Exception as e:
-        return JSONResponse(
-            content={
-                "version": "1.0",
-                "response": {
-                    "outputSpeech": {
-                        "type": "PlainText",
-                        "text": f"Ocurrió un error: {str(e)}"
-                    },
-                    "shouldEndSession": True
-                }
-            },
-            media_type="application/json"
-        )
+    return JSONResponse(
+        content={
+            "version": "1.0",
+            "response": {
+                "outputSpeech": {
+                    "type": "PlainText",
+                    "text": "Hola desde FastAPI, la conexión funciona correctamente."
+                },
+                "shouldEndSession": False
+            }
+        },
+        media_type="application/json"
+    )
